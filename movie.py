@@ -14,26 +14,22 @@ class video:
         while(cap.isOpened()):
             ret, frame = cap.read()
             fgmask = fgbg.apply(frame,False)
+
+            # threshhold classified 2 cluster
             ret,thresh = cv2.threshold(fgmask,127,255,0)
-            mask_rgb = cv2.cvtColor(fgmask,cv2.COLOR_GRAY2BGR)
             row, col= thresh.shape
+            # find contours
             contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
             cv2.drawContours(frame,contours,-1,(0,255,0),3)
-            """
-            frame[np.where((fgmask != 0))] = [255,255,255]
-            c = 0
-            print row,col
-            for i in range(0,row):
-                for j in range(0,col):
-                    c += 1   
-            # which
-            #self._findBoundary( np.where((draw != [0,0,0]).all(axis = 2)),frame )
-            """
+            # find boundary (simple method)
+            self._findBoundary( np.where((fgmask != 0)),frame )
             cv2.imshow('frame',frame)
             count += 1
+            # rough adative change background 
             if count > 10:
                 fgbg = cv2.BackgroundSubtractorMOG()
                 count =0
+            # wait key click Q or ESC to leave 
             if cv2.waitKey(30) & 0xFF == ord('q') or cv2.waitKey(30) & 0xFF == 27:
                 break
         cap.release()
@@ -53,7 +49,9 @@ class video:
 
             if minX > x :
                 minX = x
-            elif maxX < y :
+            elif maxX < x :
+                maxX = x
+            elif minY > y :
                 minY = y
             elif maxY < y:
                 maxY = y
@@ -62,7 +60,8 @@ class video:
             (maxX,maxY),
             (0,255,0),
             2
-        )        
+        )
+
     def _pixelValue(self, pixel,value):
         for i in range(0,2):
             if pixel[i] != value[i]:
