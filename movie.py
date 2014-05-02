@@ -9,21 +9,27 @@ class video:
     def read(self):
         #cap = cv2.VideoCapture(filename)
         cap = cv2.VideoCapture(0)
-        fgbg = cv2.BackgroundSubtractorMOG()
+        fgbg = cv2.BackgroundSubtractorMOG(3,3,0.5)
         count = 0
         while(cap.isOpened()):
-            ret, frame = cap.read()
-            fgmask = fgbg.apply(frame,False)
+            ret, ori_frame = cap.read()
+            # smaller resizing
+            size = 2
+            frame = cv2.resize(ori_frame,None,fx=float(1)/size,fy=float(1)/size,interpolation = cv2.INTER_CUBIC)
+            fgmask = fgbg.apply(frame,False,0.5)
 
             # threshhold classified 2 cluster
             ret,thresh = cv2.threshold(fgmask,127,255,0)
             row, col= thresh.shape
             # find contours
             contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-            cv2.drawContours(frame,contours,-1,(0,255,0),3)
+            for i in range(0,len(contours)):
+                contours[i] = contours[i] * size
+            cv2.drawContours(ori_frame,contours,-1,(0,255,0),3)
             # find boundary (simple method)
-            self._findBoundary( np.where((fgmask != 0)),frame )
-            cv2.imshow('frame',frame)
+            self._findBoundary( np.where((fgmask != 0)),ori_frame ,size)
+            frame = cv2.resize(frame,None,fx=2,fy=2,interpolation = cv2.INTER_CUBIC)
+            cv2.imshow('frame',ori_frame)
             count += 1
             # rough adative change background 
             if count > 10:
@@ -34,18 +40,20 @@ class video:
                 break
         cap.release()
         cv2.destroyWindow('frame')
-    def _findBoundary(self,feature,frame):
+    def _findBoundary(self,feature,frame,size):
+        """
+            find boundary
+        """
         row,col ,chan = frame.shape
+        if len(feature[0]) < 5:
+            return 0
         minX = row
         minY = col
         maxX = 0
         maxY = 0
-        print feature[0]
-        print feature[1]
-        print "\n"
         for i in range(0,len(feature[0])):
-            y = feature[0][i]
-            x = feature[1][i]
+            y = int(size*feature[0][i])
+            x = int(size*feature[1][i])
 
             if minX > x :
                 minX = x
